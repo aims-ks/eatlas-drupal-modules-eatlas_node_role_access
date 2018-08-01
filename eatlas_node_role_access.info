@@ -1,0 +1,15 @@
+name = eAtlas - Node role access
+description = [eatlas/eatlas_node_role_access] Generic module that add "Role" in the "Authoring information" of each node, to allow control access by role.
+core = 7.x
+
+files[] = eatlas_node_role_access.module
+dependencies[] = node
+dependencies[] = user (>=7.36)
+
+package = eAtlas
+
+; Attributes used by the update module.
+; There fields needs to be removed if the module is migrated to Drupal.org
+project status url = "http://drupal.eatlas.org.au/modules/eatlas"
+version = "7.x-1.2"
+project = "eatlas_node_role_access"

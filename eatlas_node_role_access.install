@@ -1,0 +1,45 @@
+<?php
+// Example for Drupal 6 (almost the same with D7)
+//     https://www.drupal.org/node/185596#comment-941821
+
+/**
+ * Implements hook_install().
+ *     https://api.drupal.org/api/drupal/modules%21system%21system.api.php/function/hook_install/7
+ */
+function eatlas_node_role_access_install() {
+	$schema['node'] = array();
+	eatlas_node_role_access_schema_alter($schema);
+	foreach ($schema['node']['fields'] as $name => $spec) {
+		// https://api.drupal.org/api/drupal/includes!database!database.inc/function/db_add_field/7
+		db_add_field('node', $name, $spec);
+	}
+}
+
+/**
+ * Implements hook_uninstall().
+ *     https://api.drupal.org/api/drupal/modules%21system%21system.api.php/function/hook_uninstall/7
+ */
+function eatlas_node_role_access_uninstall() {
+	$schema['node'] = array();
+	eatlas_node_role_access_schema_alter($schema);
+	foreach ($schema['node']['fields'] as $name => $spec) {
+		// https://api.drupal.org/api/drupal/includes%21database%21database.inc/function/db_drop_field/7
+		db_drop_field('node', $name);
+	}
+}
+
+/**
+ * Implements hook_schema_alter().
+ *     https://api.drupal.org/api/drupal/modules%21system%21system.api.php/function/hook_schema_alter/7
+ */
+function eatlas_node_role_access_schema_alter(&$schema) {
+	if (isset($schema['node'])) {
+		$schema['node']['fields']['eatlas_role'] = array(
+			'type' => 'int',
+			'not null' => FALSE,
+			'default' => NULL
+		);
+	}
+}
+
+?>

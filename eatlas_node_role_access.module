@@ -1,0 +1,76 @@
+<?php
+
+/**
+ * Implements hook_form_alter().
+ *     https://api.drupal.org/api/drupal/modules!system!system.api.php/function/hook_form_alter/7
+ * Form API:
+ *     https://api.drupal.org/api/drupal/developer!topics!forms_api_reference.html/7
+ * Add the "Editable by role" field to all form that has a "author" fieldset (the "Authoring information" option at the bottom of the form).
+ */
+function eatlas_node_role_access_form_alter(&$form, &$form_state, $form_id) {
+	if (isset($form['#node']) && isset($form['author']['#type']) && $form['author']['#type'] === 'fieldset' && !isset($form['author']['eatlas_role'])) {
+		$node = $form['#node'];
+		// NOTE: There is NO '#autocomplete_path' for Roles. We can not use a auto-complete textfield here.
+		// ACCESS: The "author" fieldset has "#access' => user_access('administer nodes')" which restrict access.
+
+		// user_roles return an associative array of "rid => role name", perfect for a select field
+		$roles = user_roles();
+		// Remove anonymous from the list (it's too dangerous to give edit rights to anonymous)
+		unset($roles[DRUPAL_ANONYMOUS_RID]);
+
+		$form['author']['eatlas_role'] = array (
+			'#weight' => 0, // Place it bellow "Authored by" (it has a weight of -1)
+			'#type' => 'select',
+			'#title' => 'Editable by role',
+			// IMPORTANT: DO NOT use "array-merge", it will mess up the Role IDs
+			//     http://php.net/manual/en/function.array-merge.php
+			'#options' => array('' => t('-- Author only --')) + $roles,
+			'#maxlength' => 60,
+			'#default_value' => !empty($node->eatlas_role) ? $node->eatlas_role : '',
+			'#description' => 'Leave blank to make the node only editable by the author (an whatever is specified in the Permissions page).'
+		);
+		//$form['#validate'][] = '_eatlas_node_role_access_validate';
+		$form['#submit'][] = '_eatlas_node_role_access_submit';
+	}
+}
+
+function _eatlas_node_role_access_validate($form, &$form_state) {
+	// We can trust the dropdown...
+}
+
+function _eatlas_node_role_access_submit($form, &$form_state) {
+	$form_state['node']->eatlas_role = $form_state['values']['eatlas_role'];
+}
+
+/**
+ * Implements hook_node_access().
+ *     https://api.drupal.org/api/drupal/modules%21node%21node.api.php/function/hook_node_access/7
+ * Block access to nodes, if the user is not allow to view the content type.
+ */
+function eatlas_node_role_access_node_access($node, $op, $account) {
+	if ($op == 'update' && property_exists($node, 'eatlas_role')) {
+		// Denied access to the node if the user is not allowed to
+		// View that content type (unless he is the author of the node)
+		$rid = $node->eatlas_role;
+		if ($rid !== NULL && _eatlas_node_role_access_user_has_role($rid)) {
+			// Access denied!!
+			return NODE_ACCESS_ALLOW;
+		}
+	}
+
+	// Let other modules decided
+	return NODE_ACCESS_IGNORE;
+}
+
+function _eatlas_node_role_access_user_has_role($rid) {
+	$account = $GLOBALS ['user'];
+	if (!$account) {
+		return $rid === DRUPAL_ANONYMOUS_RID;
+	}
+	if ($rid === DRUPAL_AUTHENTICATED_RID) {
+		return true;
+	}
+	return user_has_role($rid, $account);
+}
+
+?>
